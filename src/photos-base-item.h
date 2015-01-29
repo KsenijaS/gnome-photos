@@ -1,7 +1,7 @@
 /*
  * Photos - access, organize and share your photos on GNOME
  * Copyright © 2014 Pranav Kant
- * Copyright © 2012, 2013, 2014 Red Hat, Inc.
+ * Copyright © 2012, 2013, 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -88,6 +88,8 @@ struct _PhotosBaseItemClass
 
 GType               photos_base_item_get_type           (void) G_GNUC_CONST;
 
+void                photos_base_item_add_operation      (PhotosBaseItem *self, const gchar *operation);
+
 gboolean            photos_base_item_can_trash          (PhotosBaseItem *self);
 
 void                photos_base_item_destroy            (PhotosBaseItem *self);
@@ -169,6 +171,13 @@ void                photos_base_item_open               (PhotosBaseItem *self,
                                                          guint32 timestamp);
 
 void                photos_base_item_print              (PhotosBaseItem *self, GtkWidget *toplevel);
+
+void                photos_base_item_process_async      (PhotosBaseItem *self,
+                                                         GCancellable *cancellable,
+                                                         GAsyncReadyCallback callback,
+                                                         gpointer user_data);
+
+void                photos_base_item_process_finish     (PhotosBaseItem *self, GAsyncResult *res, GError **error);
 
 void                photos_base_item_refresh            (PhotosBaseItem *self);
 
