@@ -1,7 +1,7 @@
 /*
  * Photos - access, organize and share your photos on GNOME
  * Copyright © 2014 Pranav Kant
- * Copyright © 2012, 2013, 2014 Red Hat, Inc.
+ * Copyright © 2012, 2013, 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -67,6 +67,7 @@ struct _PhotosBaseItemPrivate
   gboolean collection;
   gboolean failed_thumbnailing;
   gboolean favorite;
+  gboolean loaded_once;
   const gchar *thumb_path;
   gchar *author;
   gchar *default_app_name;
@@ -708,17 +709,14 @@ photos_base_item_load (PhotosBaseItem *self, GCancellable *cancellable, GError *
   GeglNode *ret_val = NULL;
   gchar *path = NULL;
 
-  if (priv->graph == NULL)
+  if (!priv->loaded_once)
     {
       path = photos_base_item_download (self, cancellable, error);
       if (path == NULL)
         goto out;
 
-      priv->graph = gegl_node_new ();
-      priv->node = gegl_node_new_child (priv->graph,
-                                        "operation", "gegl:load",
-                                        "path", path,
-                                        NULL);
+      gegl_node_set (priv->node, "path", path, NULL);
+      priv->loaded_once = TRUE;
     }
 
   gegl_node_process (priv->node);
@@ -1367,9 +1365,16 @@ photos_base_item_load_async (PhotosBaseItem *self,
                              GAsyncReadyCallback callback,
                              gpointer user_data)
 {
+  PhotosBaseItemPrivate *priv = self->priv;
   GTask *task;
 
   g_return_if_fail (PHOTOS_IS_BASE_ITEM (self));
+
+  if (priv->graph == NULL)
+    {
+      priv->graph = gegl_node_new ();
+      priv->node = gegl_node_new_child (priv->graph, "operation", "gegl:load", NULL);
+    }
 
   task = g_task_new (self, cancellable, callback, user_data);
   g_task_set_check_cancellable (task, TRUE);
