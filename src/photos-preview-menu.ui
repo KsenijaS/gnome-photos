@@ -25,6 +25,18 @@
     </section>
     <section>
       <item>
+        <attribute name="action">app.insta</attribute>
+        <attribute name="target">gegl:insta-1977</attribute>
+        <attribute name="label" translatable="yes">1977</attribute>
+      </item>
+      <item>
+        <attribute name="action">app.insta</attribute>
+        <attribute name="target">gegl:insta-brannan</attribute>
+        <attribute name="label" translatable="yes">Brannan</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
         <attribute name="action">app.properties</attribute>
         <attribute name="label" translatable="yes">Properties</attribute>
       </item>

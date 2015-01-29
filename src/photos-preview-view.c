@@ -1,6 +1,6 @@
 /*
  * Photos - access, organize and share your photos on GNOME
- * Copyright © 2013, 2014 Red Hat, Inc.
+ * Copyright © 2013, 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -30,9 +30,12 @@
 #include <glib/gi18n.h>
 
 #include "gegl-gtk-view.h"
+#include "photos-base-item.h"
+#include "photos-base-manager.h"
 #include "photos-mode-controller.h"
 #include "photos-preview-nav-buttons.h"
 #include "photos-preview-view.h"
+#include "photos-search-context.h"
 
 
 struct _PhotosPreviewViewPrivate
@@ -41,6 +44,7 @@ struct _PhotosPreviewViewPrivate
   GtkWidget *overlay;
   GtkWidget *stack;
   GtkWidget *view;
+  PhotosBaseManager *item_mngr;
   PhotosModeController *mode_cntrlr;
   PhotosPreviewNavButtons *nav_buttons;
 };
@@ -195,6 +199,44 @@ photos_preview_view_scale_and_align_image (PhotosPreviewView *self, GtkWidget *v
 
 
 static void
+photos_preview_view_insta_process (GObject *source_object, GAsyncResult *res, gpointer user_data)
+{
+  PhotosPreviewView *self = PHOTOS_PREVIEW_VIEW (user_data);
+  PhotosPreviewViewPrivate *priv = self->priv;
+  GError *error = NULL;
+  GtkWidget *view;
+  PhotosBaseItem *item = PHOTOS_BASE_ITEM (source_object);
+
+  photos_base_item_process_finish (item, res, &error);
+  if (error != NULL)
+    {
+      g_warning ("Unable to process item: %s", error->message);
+      g_error_free (error);
+    }
+
+  view = gtk_stack_get_visible_child (GTK_STACK (priv->stack));
+  photos_preview_view_scale_and_align_image (self, view);
+  gtk_widget_queue_draw (view);
+}
+
+
+static void
+photos_preview_view_insta (PhotosPreviewView *self, GVariant *parameter)
+{
+  PhotosBaseItem *item;
+  const gchar *operation;
+
+  item = PHOTOS_BASE_ITEM (photos_base_manager_get_active_object (self->priv->item_mngr));
+  if (item == NULL)
+    return;
+
+  g_variant_get (parameter, "&s", &operation);
+  photos_base_item_add_operation (item, operation);
+  photos_base_item_process_async (item, NULL, photos_preview_view_insta_process, self);
+}
+
+
+static void
 photos_preview_view_size_allocate (PhotosPreviewView *self, GdkRectangle *allocation, gpointer user_data)
 {
   GtkWidget *view = GTK_WIDGET (user_data);
@@ -238,6 +280,7 @@ photos_preview_view_dispose (GObject *object)
   PhotosPreviewViewPrivate *priv = self->priv;
 
   g_clear_object (&priv->node);
+  g_clear_object (&priv->item_mngr);
   g_clear_object (&priv->mode_cntrlr);
 
   G_OBJECT_CLASS (photos_preview_view_parent_class)->dispose (object);
@@ -290,11 +333,19 @@ static void
 photos_preview_view_init (PhotosPreviewView *self)
 {
   PhotosPreviewViewPrivate *priv;
+  GAction *action;
+  GApplication *app;
   GtkStyleContext *context;
   GtkWidget *view;
+  PhotosSearchContextState *state;
 
   self->priv = photos_preview_view_get_instance_private (self);
   priv = self->priv;
+
+  app = g_application_get_default ();
+  state = photos_search_context_get_state (PHOTOS_SEARCH_CONTEXT (app));
+
+  priv->item_mngr = g_object_ref (state->item_mngr);
 
   priv->mode_cntrlr = photos_mode_controller_dup_singleton ();
   g_signal_connect_swapped (priv->mode_cntrlr,
@@ -316,6 +367,9 @@ photos_preview_view_init (PhotosPreviewView *self)
 
   view = photos_preview_view_create_view (self);
   gtk_container_add (GTK_CONTAINER (priv->stack), view);
+
+  action = g_action_map_lookup_action (G_ACTION_MAP (app), "insta");
+  g_signal_connect_swapped (action, "activate", G_CALLBACK (photos_preview_view_insta), self);
 }
 
 

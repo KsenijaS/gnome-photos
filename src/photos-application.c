@@ -1,7 +1,7 @@
 /*
  * Photos - access, organize and share your photos on GNOME
  * Copyright © 2014, 2015 Pranav Kant
- * Copyright © 2012, 2013, 2014 Red Hat, Inc.
+ * Copyright © 2012, 2013, 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -64,6 +64,7 @@ struct _PhotosApplicationPrivate
   GSettings *ss_settings;
   GSimpleAction *fs_action;
   GSimpleAction *gear_action;
+  GSimpleAction *insta_action;
   GSimpleAction *open_action;
   GSimpleAction *print_action;
   GSimpleAction *properties_action;
@@ -699,6 +700,7 @@ photos_application_window_mode_changed (PhotosApplication *self, PhotosWindowMod
 
   enable = (mode == PHOTOS_WINDOW_MODE_PREVIEW);
   g_simple_action_set_enabled (priv->gear_action, enable);
+  g_simple_action_set_enabled (priv->insta_action, enable);
   g_simple_action_set_enabled (priv->open_action, enable);
   g_simple_action_set_enabled (priv->print_action, enable);
   g_simple_action_set_enabled (priv->properties_action, enable);
@@ -901,6 +903,9 @@ photos_application_startup (GApplication *application)
   g_signal_connect (priv->gear_action, "activate", G_CALLBACK (photos_application_action_toggle), self);
   g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->gear_action));
 
+  priv->insta_action = g_simple_action_new ("insta", G_VARIANT_TYPE_STRING);
+  g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->insta_action));
+
   priv->open_action = g_simple_action_new ("open-current", NULL);
   g_signal_connect_swapped (priv->open_action, "activate", G_CALLBACK (photos_application_open_current), self);
   g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->open_action));
@@ -1014,6 +1019,7 @@ photos_application_dispose (GObject *object)
   g_clear_object (&priv->ss_settings);
   g_clear_object (&priv->fs_action);
   g_clear_object (&priv->gear_action);
+  g_clear_object (&priv->insta_action);
   g_clear_object (&priv->open_action);
   g_clear_object (&priv->print_action);
   g_clear_object (&priv->properties_action);
