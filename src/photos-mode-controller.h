@@ -1,6 +1,6 @@
 /*
  * Photos - access, organize and share your photos on GNOME
- * Copyright © 2012, 2013, 2014 Red Hat, Inc.
+ * Copyright © 2012, 2013, 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -55,6 +55,7 @@ typedef enum
 {
   PHOTOS_WINDOW_MODE_NONE,
   PHOTOS_WINDOW_MODE_COLLECTIONS,
+  PHOTOS_WINDOW_MODE_EDIT,
   PHOTOS_WINDOW_MODE_FAVORITES,
   PHOTOS_WINDOW_MODE_OVERVIEW,
   PHOTOS_WINDOW_MODE_PREVIEW,
