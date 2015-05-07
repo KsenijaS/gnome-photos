@@ -201,7 +201,7 @@ photos_embed_activate_result (PhotosEmbed *self)
 
 
 static void
-photos_embed_prepare_for_preview (PhotosEmbed *self)
+photos_embed_prepare_for_preview (PhotosEmbed *self, gboolean reset)
 {
   PhotosEmbedPrivate *priv = self->priv;
 
@@ -209,8 +209,10 @@ photos_embed_prepare_for_preview (PhotosEmbed *self)
    *       ErrorHandler
    */
 
+  if (reset)
+    photos_preview_view_set_node (PHOTOS_PREVIEW_VIEW (priv->preview), NULL);
+
   photos_spinner_box_stop (PHOTOS_SPINNER_BOX (priv->spinner_box));
-  photos_preview_view_set_node (PHOTOS_PREVIEW_VIEW (priv->preview), NULL);
   gtk_stack_set_visible_child_name (GTK_STACK (priv->stack), "preview");
 }
 
@@ -539,7 +541,7 @@ photos_embed_window_mode_changed (PhotosModeController *mode_cntrlr,
       goto set_toolbar_model;
 
     case PHOTOS_WINDOW_MODE_PREVIEW:
-      photos_embed_prepare_for_preview (self);
+      photos_embed_prepare_for_preview (self, old_mode != PHOTOS_WINDOW_MODE_EDIT);
       break;
 
     case PHOTOS_WINDOW_MODE_SEARCH:
