@@ -272,13 +272,13 @@ photos_preview_view_window_mode_changed (PhotosPreviewView *self, PhotosWindowMo
   switch (mode)
     {
     case PHOTOS_WINDOW_MODE_COLLECTIONS:
-    case PHOTOS_WINDOW_MODE_EDIT:
     case PHOTOS_WINDOW_MODE_FAVORITES:
     case PHOTOS_WINDOW_MODE_OVERVIEW:
     case PHOTOS_WINDOW_MODE_SEARCH:
       photos_preview_nav_buttons_hide (priv->nav_buttons);
       break;
 
+    case PHOTOS_WINDOW_MODE_EDIT:
     case PHOTOS_WINDOW_MODE_PREVIEW:
       photos_preview_nav_buttons_show (priv->nav_buttons);
       break;

@@ -29,8 +29,10 @@
 #include <glib/gi18n.h>
 
 #include "photos-base-manager.h"
+#include "photos-edit-bar.h"
 #include "photos-enums.h"
 #include "photos-icons.h"
+#include "photos-mode-controller.h"
 #include "photos-preview-model.h"
 #include "photos-preview-nav-buttons.h"
 #include "photos-search-context.h"
@@ -42,12 +44,15 @@ struct _PhotosPreviewNavButtonsPrivate
   GtkGesture *tap_gesture;
   GtkTreeModel *model;
   GtkTreePath *current_path;
+  GtkWidget *bar_widget;
   GtkWidget *next_widget;
   GtkWidget *overlay;
   GtkWidget *prev_widget;
   GtkWidget *preview_view;
   PhotosBaseManager *item_mngr;
+  PhotosModeController *mode_cntrlr;
   PhotosPreviewAction action;
+  PhotosWindowMode mode;
   gboolean enable_next;
   gboolean enable_prev;
   gboolean visible;
@@ -114,7 +119,19 @@ photos_preview_nav_buttons_fade_out_button (PhotosPreviewNavButtons *self, GtkWi
 
 
 static void
-photos_preview_nav_buttons_update_visibility (PhotosPreviewNavButtons *self)
+photos_preview_nav_buttons_update_visibility_edit (PhotosPreviewNavButtons *self)
+{
+  PhotosPreviewNavButtonsPrivate *priv = self->priv;
+
+  if (priv->mode == PHOTOS_WINDOW_MODE_EDIT && priv->visible && priv->visible_internal)
+    photos_preview_nav_buttons_fade_in_button (self, priv->bar_widget);
+  else
+    photos_preview_nav_buttons_fade_out_button (self, priv->bar_widget);
+}
+
+
+static void
+photos_preview_nav_buttons_update_visibility_prev_next (PhotosPreviewNavButtons *self)
 {
   PhotosPreviewNavButtonsPrivate *priv = self->priv;
   GtkTreeIter iter;
@@ -122,6 +139,7 @@ photos_preview_nav_buttons_update_visibility (PhotosPreviewNavButtons *self)
 
   if (priv->model == NULL
       || priv->current_path == NULL
+      || priv->mode != PHOTOS_WINDOW_MODE_PREVIEW
       || !priv->visible
       || !gtk_tree_model_get_iter (priv->model, &iter, priv->current_path))
     {
@@ -146,6 +164,14 @@ photos_preview_nav_buttons_update_visibility (PhotosPreviewNavButtons *self)
     photos_preview_nav_buttons_fade_in_button (self, priv->prev_widget);
   else
     photos_preview_nav_buttons_fade_out_button (self, priv->prev_widget);
+}
+
+
+static void
+photos_preview_nav_buttons_update_visibility (PhotosPreviewNavButtons *self)
+{
+  photos_preview_nav_buttons_update_visibility_edit (self);
+  photos_preview_nav_buttons_update_visibility_prev_next (self);
 }
 
 
@@ -201,6 +227,28 @@ photos_preview_nav_buttons_leave_notify (PhotosPreviewNavButtons *self)
 {
   photos_preview_nav_buttons_queue_auto_hide (self);
   return FALSE;
+}
+
+
+static void
+photos_preview_nav_buttons_notify_hover (PhotosEditBar *bar, GParamSpec *pspec, gpointer user_data)
+{
+  PhotosPreviewNavButtons *self = PHOTOS_PREVIEW_NAV_BUTTONS (user_data);
+
+  if (photos_edit_bar_get_hover (bar))
+    photos_preview_nav_buttons_enter_notify (self);
+  else
+    photos_preview_nav_buttons_leave_notify (self);
+}
+
+
+static void
+photos_preview_nav_buttons_mode_changed (PhotosPreviewNavButtons *self,
+                                         PhotosWindowMode mode,
+                                         PhotosWindowMode old_mode)
+{
+  self->priv->mode = mode;
+  photos_preview_nav_buttons_update_visibility (self);
 }
 
 
@@ -294,6 +342,7 @@ photos_preview_nav_buttons_dispose (GObject *object)
   g_clear_object (&priv->overlay);
   g_clear_object (&priv->preview_view);
   g_clear_object (&priv->item_mngr);
+  g_clear_object (&priv->mode_cntrlr);
 
   G_OBJECT_CLASS (photos_preview_nav_buttons_parent_class)->dispose (object);
 }
@@ -317,10 +366,26 @@ photos_preview_nav_buttons_constructed (GObject *object)
   PhotosPreviewNavButtons *self = PHOTOS_PREVIEW_NAV_BUTTONS (object);
   PhotosPreviewNavButtonsPrivate *priv = self->priv;
   GtkStyleContext *context;
+  GtkWidget *bar;
   GtkWidget *button;
   GtkWidget *image;
 
   G_OBJECT_CLASS (photos_preview_nav_buttons_parent_class)->constructed (object);
+
+  priv->bar_widget = gtk_revealer_new ();
+  gtk_widget_set_margin_start (priv->bar_widget, 30);
+  gtk_widget_set_margin_end (priv->bar_widget, 30);
+  gtk_widget_set_margin_bottom (priv->bar_widget, 30);
+  gtk_widget_set_margin_top (priv->bar_widget, 30);
+  gtk_widget_set_valign (priv->bar_widget, GTK_ALIGN_END);
+  gtk_revealer_set_transition_type (GTK_REVEALER (priv->bar_widget), GTK_REVEALER_TRANSITION_TYPE_CROSSFADE);
+  gtk_overlay_add_overlay (GTK_OVERLAY (priv->overlay), priv->bar_widget);
+
+  bar = photos_edit_bar_new ();
+  context = gtk_widget_get_style_context (bar);
+  gtk_style_context_add_class (context, "osd");
+  gtk_container_add (GTK_CONTAINER (priv->bar_widget), bar);
+  g_signal_connect (bar, "notify::hover", G_CALLBACK (photos_preview_nav_buttons_notify_hover), self);
 
   priv->prev_widget = gtk_revealer_new ();
   gtk_widget_set_halign (priv->prev_widget, GTK_ALIGN_START);
@@ -435,6 +500,14 @@ photos_preview_nav_buttons_init (PhotosPreviewNavButtons *self)
   state = photos_search_context_get_state (PHOTOS_SEARCH_CONTEXT (app));
 
   priv->item_mngr = g_object_ref (state->item_mngr);
+
+  priv->mode_cntrlr = photos_mode_controller_dup_singleton ();
+  priv->mode = photos_mode_controller_get_window_mode (priv->mode_cntrlr);
+  g_signal_connect_object (priv->mode_cntrlr,
+                           "window-mode-changed",
+                           G_CALLBACK (photos_preview_nav_buttons_mode_changed),
+                           self,
+                           G_CONNECT_SWAPPED);
 
   priv->action = PHOTOS_PREVIEW_ACTION_NONE;
 }
