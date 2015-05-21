@@ -365,6 +365,7 @@ photos_preview_nav_buttons_constructed (GObject *object)
 {
   PhotosPreviewNavButtons *self = PHOTOS_PREVIEW_NAV_BUTTONS (object);
   PhotosPreviewNavButtonsPrivate *priv = self->priv;
+  GtkBox *button_area;
   GtkStyleContext *context;
   GtkWidget *bar;
   GtkWidget *button;
@@ -373,6 +374,7 @@ photos_preview_nav_buttons_constructed (GObject *object)
   G_OBJECT_CLASS (photos_preview_nav_buttons_parent_class)->constructed (object);
 
   priv->bar_widget = gtk_revealer_new ();
+  gtk_widget_set_halign (priv->bar_widget, GTK_ALIGN_CENTER);
   gtk_widget_set_margin_start (priv->bar_widget, 30);
   gtk_widget_set_margin_end (priv->bar_widget, 30);
   gtk_widget_set_margin_bottom (priv->bar_widget, 30);
@@ -386,6 +388,12 @@ photos_preview_nav_buttons_constructed (GObject *object)
   gtk_style_context_add_class (context, "osd");
   gtk_container_add (GTK_CONTAINER (priv->bar_widget), bar);
   g_signal_connect (bar, "notify::hover", G_CALLBACK (photos_preview_nav_buttons_notify_hover), self);
+
+  button_area = photos_edit_bar_get_button_area (PHOTOS_EDIT_BAR (bar));
+
+  button = gtk_button_new_with_label (_("Gray"));
+  gtk_actionable_set_action_name (GTK_ACTIONABLE (button), "app.gray-current");
+  gtk_box_pack_start (button_area, button, FALSE, FALSE, 0);
 
   priv->prev_widget = gtk_revealer_new ();
   gtk_widget_set_halign (priv->prev_widget, GTK_ALIGN_START);
