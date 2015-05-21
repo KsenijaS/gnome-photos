@@ -81,6 +81,7 @@ struct _PhotosApplicationPrivate
   GSimpleAction *set_bg_action;
   GSimpleAction *set_ss_action;
   GSimpleAction *remote_display_action;
+  GSimpleAction *undo_action;
   GtkWidget *main_window;
   PhotosCameraCache *camera_cache;
   PhotosModeController *mode_cntrlr;
@@ -694,6 +695,7 @@ photos_application_window_mode_changed (PhotosApplication *self, PhotosWindowMod
 
   enable = (mode == PHOTOS_WINDOW_MODE_EDIT);
   g_simple_action_set_enabled (priv->gray_action, enable);
+  g_simple_action_set_enabled (priv->undo_action, enable);
 
   enable = (mode == PHOTOS_WINDOW_MODE_COLLECTIONS
             || mode == PHOTOS_WINDOW_MODE_FAVORITES
@@ -990,6 +992,9 @@ photos_application_startup (GApplication *application)
   g_signal_connect_swapped (priv->set_ss_action, "activate", G_CALLBACK (photos_application_set_bg_common), self);
   g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->set_ss_action));
 
+  priv->undo_action = g_simple_action_new ("undo-current", NULL);
+  g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->undo_action));
+
   g_signal_connect_swapped (priv->mode_cntrlr,
                             "window-mode-changed",
                             G_CALLBACK (photos_application_window_mode_changed),
@@ -1068,6 +1073,7 @@ photos_application_dispose (GObject *object)
   g_clear_object (&priv->sel_none_action);
   g_clear_object (&priv->set_bg_action);
   g_clear_object (&priv->set_ss_action);
+  g_clear_object (&priv->undo_action);
   g_clear_object (&priv->camera_cache);
   g_clear_object (&priv->mode_cntrlr);
   g_clear_object (&priv->extract_priority);
