@@ -68,6 +68,7 @@ struct _PhotosApplicationPrivate
   GSettings *ss_settings;
   GSimpleAction *fs_action;
   GSimpleAction *gear_action;
+  GSimpleAction *gray_action;
   GSimpleAction *open_action;
   GSimpleAction *print_action;
   GSimpleAction *properties_action;
@@ -691,6 +692,9 @@ photos_application_window_mode_changed (PhotosApplication *self, PhotosWindowMod
   PhotosApplicationPrivate *priv = self->priv;
   gboolean enable;
 
+  enable = (mode == PHOTOS_WINDOW_MODE_EDIT);
+  g_simple_action_set_enabled (priv->gray_action, enable);
+
   enable = (mode == PHOTOS_WINDOW_MODE_COLLECTIONS
             || mode == PHOTOS_WINDOW_MODE_FAVORITES
             || mode == PHOTOS_WINDOW_MODE_OVERVIEW
@@ -914,6 +918,9 @@ photos_application_startup (GApplication *application)
   g_signal_connect (priv->gear_action, "activate", G_CALLBACK (photos_application_action_toggle), self);
   g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->gear_action));
 
+  priv->gray_action = g_simple_action_new ("gray-current", NULL);
+  g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->gray_action));
+
   priv->open_action = g_simple_action_new ("open-current", NULL);
   g_signal_connect_swapped (priv->open_action, "activate", G_CALLBACK (photos_application_open_current), self);
   g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (priv->open_action));
@@ -1049,6 +1056,7 @@ photos_application_dispose (GObject *object)
   g_clear_object (&priv->ss_settings);
   g_clear_object (&priv->fs_action);
   g_clear_object (&priv->gear_action);
+  g_clear_object (&priv->gray_action);
   g_clear_object (&priv->open_action);
   g_clear_object (&priv->print_action);
   g_clear_object (&priv->properties_action);
